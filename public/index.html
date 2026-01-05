@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meme评分器 - Solana</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f0f0f;
+      color: #e0e0e0;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    header h1 {
+      font-size: 28px;
+      color: #fff;
+      margin-bottom: 8px;
+    }
+
+    header p {
+      color: #888;
+      font-size: 14px;
+    }
+
+    .search-box {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 30px;
+    }
+
+    .search-box input {
+      flex: 1;
+      padding: 14px 18px;
+      font-size: 15px;
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 8px;
+      color: #fff;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .search-box input:focus {
+      border-color: #0ea5e9;
+    }
+
+    .search-box button {
+      padding: 14px 28px;
+      font-size: 15px;
+      font-weight: 600;
+      background: #0ea5e9;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .search-box button:hover {
+      background: #0284c7;
+    }
+
+    .search-box button:disabled {
+      background: #333;
+      cursor: not-allowed;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 60px;
+      color: #888;
+    }
+
+    .loading .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid #333;
+      border-top-color: #0ea5e9;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 15px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .error {
+      background: #2d1f1f;
+      border: 1px solid #5c2828;
+      color: #f87171;
+      padding: 15px 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+
+    .result {
+      display: none;
+    }
+
+    .result.show {
+      display: block;
+    }
+
+    .card {
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .card-title {
+      font-size: 14px;
+      color: #888;
+      margin-bottom: 15px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* 评分卡片 */
+    .score-main {
+      display: flex;
+      align-items: center;
+      gap: 30px;
+      margin-bottom: 20px;
+    }
+
+    .score-circle {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #222;
+      border: 4px solid currentColor;
+    }
+
+    .score-circle .number {
+      font-size: 36px;
+      font-weight: 700;
+    }
+
+    .score-circle .label {
+      font-size: 12px;
+      opacity: 0.8;
+    }
+
+    .score-rating {
+      flex: 1;
+    }
+
+    .score-rating .rating-text {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .score-rating .rating-desc {
+      color: #888;
+      font-size: 14px;
+    }
+
+    .score-breakdown {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 15px;
+    }
+
+    .score-item {
+      background: #222;
+      padding: 12px;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .score-item .name {
+      font-size: 12px;
+      color: #888;
+      margin-bottom: 5px;
+    }
+
+    .score-item .value {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    /* 代币信息 */
+    .token-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 20px;
+    }
+
+    .token-name {
+      font-size: 20px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .token-symbol {
+      color: #888;
+      font-size: 14px;
+    }
+
+    .token-ca {
+      font-family: monospace;
+      font-size: 12px;
+      color: #666;
+      background: #222;
+      padding: 6px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .token-ca:hover {
+      color: #0ea5e9;
+    }
+
+    .market-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 15px;
+    }
+
+    .market-item {
+      background: #222;
+      padding: 15px;
+      border-radius: 8px;
+    }
+
+    .market-item .label {
+      font-size: 12px;
+      color: #888;
+      margin-bottom: 5px;
+    }
+
+    .market-item .value {
+      font-size: 18px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .market-item .value.positive {
+      color: #22c55e;
+    }
+
+    .market-item .value.negative {
+      color: #ef4444;
+    }
+
+    /* 砸盘模拟表格 */
+    .dump-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .dump-table th,
+    .dump-table td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #2a2a2a;
+    }
+
+    .dump-table th {
+      color: #888;
+      font-weight: 500;
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+
+    .dump-table td {
+      font-size: 14px;
+    }
+
+    .dump-table .impact {
+      color: #ef4444;
+      font-weight: 600;
+    }
+
+    .dump-table tr:hover {
+      background: #222;
+    }
+
+    /* 持仓列表 */
+    .holder-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .holder-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      background: #222;
+      border-radius: 6px;
+    }
+
+    .holder-rank {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #333;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .holder-address {
+      flex: 1;
+      font-family: monospace;
+      font-size: 13px;
+      color: #888;
+    }
+
+    .holder-percent {
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .holder-tag {
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    .tag-smart {
+      background: #1e3a5f;
+      color: #60a5fa;
+    }
+
+    .tag-dev {
+      background: #3d2f1e;
+      color: #fbbf24;
+    }
+
+    /* 安全检查 */
+    .safety-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .safety-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px;
+      background: #222;
+      border-radius: 8px;
+    }
+
+    .safety-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+
+    .safety-icon.safe {
+      background: #1a3d1a;
+      color: #22c55e;
+    }
+
+    .safety-icon.danger {
+      background: #3d1a1a;
+      color: #ef4444;
+    }
+
+    .safety-item .text {
+      font-size: 13px;
+    }
+
+    /* 响应式 */
+    @media (max-width: 768px) {
+      .score-breakdown {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .market-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .safety-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .score-main {
+        flex-direction: column;
+        text-align: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Meme评分器</h1>
+      <p>快速评估Solana Meme币的投资风险</p>
+    </header>
+
+    <div class="search-box">
+      <input type="text" id="caInput" placeholder="输入代币合约地址 (CA)..." />
+      <button id="analyzeBtn" onclick="analyze()">分析</button>
+    </div>
+
+    <div id="loading" class="loading" style="display: none;">
+      <div class="spinner"></div>
+      <p>正在分析中...</p>
+    </div>
+
+    <div id="error" class="error" style="display: none;"></div>
+
+    <div id="result" class="result">
+      <!-- 评分卡片 -->
+      <div class="card">
+        <div class="score-main">
+          <div class="score-circle" id="scoreCircle">
+            <span class="number" id="totalScore">--</span>
+            <span class="label">总分</span>
+          </div>
+          <div class="score-rating">
+            <div class="rating-text" id="ratingText">--</div>
+            <div class="rating-desc" id="ratingDesc">输入CA开始分析</div>
+          </div>
+        </div>
+        <div class="score-breakdown">
+          <div class="score-item">
+            <div class="name">持仓安全</div>
+            <div class="value" id="holdingScore">--/40</div>
+          </div>
+          <div class="score-item">
+            <div class="name">流动性</div>
+            <div class="value" id="liquidityScore">--/25</div>
+          </div>
+          <div class="score-item">
+            <div class="name">聪明钱</div>
+            <div class="value" id="smartMoneyScore">--/25</div>
+          </div>
+          <div class="score-item">
+            <div class="name">合约安全</div>
+            <div class="value" id="safetyScore">--/10</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 代币信息 -->
+      <div class="card">
+        <div class="card-title">代币信息</div>
+        <div class="token-header">
+          <div>
+            <div class="token-name" id="tokenName">--</div>
+            <div class="token-symbol" id="tokenSymbol">--</div>
+          </div>
+          <div class="token-ca" id="tokenCA" onclick="copyCA()">点击复制CA</div>
+        </div>
+        <div class="market-grid">
+          <div class="market-item">
+            <div class="label">价格</div>
+            <div class="value" id="price">--</div>
+          </div>
+          <div class="market-item">
+            <div class="label">市值</div>
+            <div class="value" id="marketCap">--</div>
+          </div>
+          <div class="market-item">
+            <div class="label">流动性</div>
+            <div class="value" id="liquidity">--</div>
+          </div>
+          <div class="market-item">
+            <div class="label">24h交易量</div>
+            <div class="value" id="volume24h">--</div>
+          </div>
+          <div class="market-item">
+            <div class="label">24h涨跌</div>
+            <div class="value" id="priceChange24h">--</div>
+          </div>
+          <div class="market-item">
+            <div class="label">交易所</div>
+            <div class="value" id="dexId">--</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 砸盘模拟 -->
+      <div class="card">
+        <div class="card-title">砸盘风险模拟</div>
+        <table class="dump-table">
+          <thead>
+            <tr>
+              <th>场景</th>
+              <th>卖出比例</th>
+              <th>预估价格</th>
+              <th>跌幅</th>
+            </tr>
+          </thead>
+          <tbody id="dumpTableBody">
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Top10持仓 -->
+      <div class="card">
+        <div class="card-title">Top 10 持仓 <span id="top10Percent" style="color: #888; font-size: 12px;"></span></div>
+        <div class="holder-list" id="holderList">
+        </div>
+      </div>
+
+      <!-- 安全检查 -->
+      <div class="card">
+        <div class="card-title">安全检查</div>
+        <div class="safety-grid">
+          <div class="safety-item">
+            <div class="safety-icon" id="mintIcon">--</div>
+            <div class="text" id="mintText">Mint权限</div>
+          </div>
+          <div class="safety-item">
+            <div class="safety-icon" id="freezeIcon">--</div>
+            <div class="text" id="freezeText">Freeze权限</div>
+          </div>
+          <div class="safety-item">
+            <div class="safety-icon" id="lpIcon">--</div>
+            <div class="text" id="lpText">LP状态</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentCA = '';
+
+    // 回车触发分析
+    document.getElementById('caInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') analyze();
+    });
+
+    async function analyze() {
+      const input = document.getElementById('caInput');
+      const ca = input.value.trim();
+
+      if (!ca) {
+        showError('请输入代币合约地址');
+        return;
+      }
+
+      // 验证CA格式 (Solana地址是base58, 32-44字符)
+      if (ca.length < 32 || ca.length > 50) {
+        showError('无效的合约地址格式');
+        return;
+      }
+
+      currentCA = ca;
+      showLoading(true);
+      hideError();
+      hideResult();
+
+      try {
+        const response = await fetch(`/api/analyze/${ca}`);
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || '分析失败');
+        }
+
+        renderResult(data);
+      } catch (error) {
+        showError(error.message);
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    function renderResult(data) {
+      // 评分
+      const scoreCircle = document.getElementById('scoreCircle');
+      scoreCircle.style.color = data.scores.ratingColor;
+      document.getElementById('totalScore').textContent = data.scores.total;
+      document.getElementById('ratingText').textContent = data.scores.ratingText;
+      document.getElementById('ratingText').style.color = data.scores.ratingColor;
+      document.getElementById('ratingDesc').textContent = `评级: ${data.scores.rating} | 综合评分 ${data.scores.total}/100`;
+
+      document.getElementById('holdingScore').textContent = `${data.scores.holding}/40`;
+      document.getElementById('liquidityScore').textContent = `${data.scores.liquidity}/25`;
+      document.getElementById('smartMoneyScore').textContent = `${data.scores.smartMoney}/25`;
+      document.getElementById('safetyScore').textContent = `${data.scores.safety}/10`;
+
+      // 代币信息
+      document.getElementById('tokenName').textContent = data.token.name || 'Unknown';
+      document.getElementById('tokenSymbol').textContent = data.token.symbol || '';
+      document.getElementById('tokenCA').textContent = shortenAddress(data.token.ca);
+
+      // 市场数据
+      document.getElementById('price').textContent = formatPrice(data.market.price);
+      document.getElementById('marketCap').textContent = formatUSD(data.market.marketCap);
+      document.getElementById('liquidity').textContent = formatUSD(data.market.liquidity);
+      document.getElementById('volume24h').textContent = formatUSD(data.market.volume24h);
+
+      const priceChange = data.market.priceChange24h;
+      const priceChangeEl = document.getElementById('priceChange24h');
+      priceChangeEl.textContent = (priceChange >= 0 ? '+' : '') + priceChange.toFixed(2) + '%';
+      priceChangeEl.className = 'value ' + (priceChange >= 0 ? 'positive' : 'negative');
+
+      document.getElementById('dexId').textContent = data.market.dexId || '--';
+
+      // 砸盘模拟
+      const dumpBody = document.getElementById('dumpTableBody');
+      dumpBody.innerHTML = data.dumpSimulation.simulations.map(sim => `
+        <tr>
+          <td>${sim.scenario}</td>
+          <td>${sim.sellPercent}%</td>
+          <td>${formatPrice(sim.newPrice)}</td>
+          <td class="impact">-${sim.impactPercent}%</td>
+        </tr>
+      `).join('');
+
+      // Top10持仓
+      document.getElementById('top10Percent').textContent = `(合计 ${data.holders.top10Percent.toFixed(2)}%)`;
+      const holderList = document.getElementById('holderList');
+      holderList.innerHTML = data.holders.top10.map(h => `
+        <div class="holder-item">
+          <div class="holder-rank">${h.rank}</div>
+          <div class="holder-address">${shortenAddress(h.address)}</div>
+          ${h.isSmartMoney ? '<span class="holder-tag tag-smart">聪明钱</span>' : ''}
+          <div class="holder-percent">${h.percent.toFixed(2)}%</div>
+        </div>
+      `).join('');
+
+      // 安全检查
+      const hasMint = data.token.mintAuthority;
+      const hasFreeze = data.token.freezeAuthority;
+
+      document.getElementById('mintIcon').className = 'safety-icon ' + (hasMint ? 'danger' : 'safe');
+      document.getElementById('mintIcon').textContent = hasMint ? '✗' : '✓';
+      document.getElementById('mintText').textContent = hasMint ? 'Mint权限: 未关闭' : 'Mint权限: 已关闭';
+
+      document.getElementById('freezeIcon').className = 'safety-icon ' + (hasFreeze ? 'danger' : 'safe');
+      document.getElementById('freezeIcon').textContent = hasFreeze ? '✗' : '✓';
+      document.getElementById('freezeText').textContent = hasFreeze ? 'Freeze权限: 存在' : 'Freeze权限: 已关闭';
+
+      document.getElementById('lpIcon').className = 'safety-icon safe';
+      document.getElementById('lpIcon').textContent = '?';
+      document.getElementById('lpText').textContent = 'LP状态: 需手动检查';
+
+      showResult();
+    }
+
+    function formatPrice(price) {
+      if (!price || price === 0) return '$0';
+      if (price < 0.00001) return '$' + price.toExponential(4);
+      if (price < 0.01) return '$' + price.toFixed(8);
+      if (price < 1) return '$' + price.toFixed(6);
+      return '$' + price.toFixed(4);
+    }
+
+    function formatUSD(value) {
+      if (!value || value === 0) return '$0';
+      if (value >= 1000000) return '$' + (value / 1000000).toFixed(2) + 'M';
+      if (value >= 1000) return '$' + (value / 1000).toFixed(2) + 'K';
+      return '$' + value.toFixed(2);
+    }
+
+    function shortenAddress(addr) {
+      if (!addr) return '--';
+      return addr.slice(0, 6) + '...' + addr.slice(-4);
+    }
+
+    function copyCA() {
+      navigator.clipboard.writeText(currentCA);
+      const el = document.getElementById('tokenCA');
+      const original = el.textContent;
+      el.textContent = '已复制!';
+      setTimeout(() => el.textContent = original, 1000);
+    }
+
+    function showLoading(show) {
+      document.getElementById('loading').style.display = show ? 'block' : 'none';
+      document.getElementById('analyzeBtn').disabled = show;
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('error');
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+
+    function hideError() {
+      document.getElementById('error').style.display = 'none';
+    }
+
+    function showResult() {
+      document.getElementById('result').classList.add('show');
+    }
+
+    function hideResult() {
+      document.getElementById('result').classList.remove('show');
+    }
+  </script>
+</body>
+</html>
