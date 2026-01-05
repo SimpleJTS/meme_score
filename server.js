@@ -36,35 +36,45 @@ app.get('/api/analyze/:ca', async (req, res) => {
       getGMGNData(ca).catch(() => null)
     ]);
 
-    if (!tokenInfo || !dexData) {
+    if (!dexData) {
       return res.status(404).json({ error: '无法获取代币信息，请检查CA是否正确' });
     }
 
+    // 如果没有Helius数据，用DexScreener的数据补充
+    const finalTokenInfo = tokenInfo || {
+      name: dexData.baseToken?.name || 'Unknown',
+      symbol: dexData.baseToken?.symbol || 'Unknown',
+      supply: dexData.baseToken?.totalSupply || 1000000000000000,
+      decimals: 9,
+      mintAuthority: null,
+      freezeAuthority: null
+    };
+
     // 分析持仓
-    const holdersAnalysis = analyzeHolders(holders, tokenInfo.supply);
+    const holdersAnalysis = analyzeHolders(holders, finalTokenInfo.supply);
 
     // 检测聪明钱
     const smartMoneyAnalysis = analyzeSmartMoney(holders, gmgnData);
 
     // 计算评分
-    const scores = calculateScores(holdersAnalysis, dexData, smartMoneyAnalysis, tokenInfo);
+    const scores = calculateScores(holdersAnalysis, dexData, smartMoneyAnalysis, finalTokenInfo);
 
     // 计算砸盘模拟
     const dumpSimulation = calculateDumpSimulation(
       dexData.priceUsd,
       dexData.liquidity,
       holdersAnalysis,
-      tokenInfo.supply
+      finalTokenInfo.supply
     );
 
     res.json({
       token: {
-        name: tokenInfo.name,
-        symbol: tokenInfo.symbol,
+        name: finalTokenInfo.name,
+        symbol: finalTokenInfo.symbol,
         ca: ca,
-        supply: tokenInfo.supply,
-        mintAuthority: tokenInfo.mintAuthority,
-        freezeAuthority: tokenInfo.freezeAuthority
+        supply: finalTokenInfo.supply,
+        mintAuthority: finalTokenInfo.mintAuthority,
+        freezeAuthority: finalTokenInfo.freezeAuthority
       },
       market: {
         price: dexData.priceUsd,
